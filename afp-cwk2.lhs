@@ -2,13 +2,18 @@ G52AFP Coursework 2 - Monadic Compiler
 
 Your full name(s)
 Minhao Li
-Jou-yin Huang
+Jou-Yin Huang
 
 Your full email address(es)
 scyml4@nottingham.ac.uk
 scyjh2@nottingham.ac.uk
 
 --------------------------------------------------------------------------------
+
+We use some functions from the following libraries.
+
+> import Data.Char
+
 
 Imperative language:
 
@@ -84,3 +89,41 @@ State monad:
 >    st >>= f = S (\s -> let (x,s') = app st s in app (f x) s')
 
 --------------------------------------------------------------------------------
+
+= compHelper x : comp xs
+
+compHelper :: Prog  
+
+
+> fresh :: ST Int 
+> fresh = S (\n -> (n, n+1))
+
+> eval :: Expr -> Code
+> eval (Val i) = [PUSH i]
+> eval (Var n) = [PUSHV n]
+> eval (App op e1 e2) = (eval e1) ++ (eval e2) ++ [DO op]
+
+mapM :: Monad m => (a -> m b) -> [a] -> m [b] 
+mapM f [] = return []
+mapM f (x:xs) = do y <- fx
+                   ys <- mapM f xs
+                   return (y:ys) 
+
+
+> comp :: Prog -> Code
+> comp p = fst (app (compHelper p) 0)
+                              
+
+> compHelper :: Prog -> ST (Code)
+> compHelper (Assign c e) = return ((eval e) ++ [POP c])
+> compHelper (If e p1 p2) = return []
+> compHelper (While e p) = do l <- fresh
+>                             l1 <- fresh 
+>                             pp <- compHelper p
+>                             return ((LABEL l : (eval e)) ++ [JUMPZ l1] ++ pp ++ [JUMP l, LABEL l1])
+> compHelper (Seqn []) = return []
+> compHelper (Seqn (p:ps)) = do pp <- compHelper p 
+>                               pps <- compHelper (Seqn ps)
+>                               return (pp ++ pps)
+
+
