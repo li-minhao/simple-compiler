@@ -90,11 +90,6 @@ State monad:
 
 --------------------------------------------------------------------------------
 
-= compHelper x : comp xs
-
-compHelper :: Prog  
-
-
 > fresh :: ST Int 
 > fresh = S (\n -> (n, n+1))
 
@@ -103,20 +98,16 @@ compHelper :: Prog
 > eval (Var n) = [PUSHV n]
 > eval (App op e1 e2) = (eval e1) ++ (eval e2) ++ [DO op]
 
-mapM :: Monad m => (a -> m b) -> [a] -> m [b] 
-mapM f [] = return []
-mapM f (x:xs) = do y <- fx
-                   ys <- mapM f xs
-                   return (y:ys) 
-
-
 > comp :: Prog -> Code
 > comp p = fst (app (compHelper p) 0)
                               
 
 > compHelper :: Prog -> ST (Code)
 > compHelper (Assign c e) = return ((eval e) ++ [POP c])
-> compHelper (If e p1 p2) = return []
+> compHelper (If e p1 p2) = do l <- fresh
+>                              pp1 <- compHelper p1
+>                              pp2 <- compHelper p2
+>                              return ((eval e) ++ [JUMPZ l] ++ pp1 ++ [LABEL 0] ++ pp2)
 > compHelper (While e p) = do l <- fresh
 >                             l1 <- fresh 
 >                             pp <- compHelper p
@@ -125,5 +116,12 @@ mapM f (x:xs) = do y <- fx
 > compHelper (Seqn (p:ps)) = do pp <- compHelper p 
 >                               pps <- compHelper (Seqn ps)
 >                               return (pp ++ pps)
+
+> testP :: Int -> Int -> Prog
+> testP a b = Seqn [Assign 'A' (Val a),
+>                   Assign 'B' (Val b),
+>                   If (App Sub (Var 'B') (Var 'A')) 
+>                      (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
+>                      (Assign 'A' (App Add (Var 'A') (Var 'B')))]
 
 
