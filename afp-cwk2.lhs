@@ -124,4 +124,11 @@ State monad:
 >                      (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
 >                      (Assign 'A' (App Add (Var 'A') (Var 'B')))]
 
+> instType :: Inst -> Int
+> instType (PUSH i) = 0
 
+
+> execHelper :: Code -> Int -> Mem -> Stack -> Mem
+> execHelper c p m s 
+>   | p >= length s = m
+>   | c!!p == PUSH i
