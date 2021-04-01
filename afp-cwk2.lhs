@@ -128,9 +128,27 @@ State monad:
 
 > instType :: Inst -> Int
 > instType (PUSH i) = 0
+> instType (PUSHV n) = 1
+> instType (POP n) = 2
+> instType (DO o) = 3
+> instType (JUMP l) = 4
+> instType (JUMPZ l) = 5
+> instType (LABEL l) = 6
+
+> pushInt :: Inst -> Int
+> pushInt (PUSH i) = i
+> pushInt _ = 0
+
+> pushVar :: Inst -> Mem -> Int
+> pushVar (PUSHV c) ((c, i):ms) = i
+> pushVar (PUSHV c) m:ms = pushVar c ms
+> pushVar _ _ = 0
+
+> popVar
 
 
 > execHelper :: Code -> Int -> Mem -> Stack -> Mem
 > execHelper c p m s 
 >   | p >= length s = m
->   | c!!p == PUSH i
+>   | instType c!!p == 0 = execHelper c (p+1) m (s ++ [pushInt c!!p])
+>   | instType c!!p == 1 = execHelper c (p+1) m (s ++ [pushVar c!!p])
