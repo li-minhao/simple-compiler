@@ -93,29 +93,31 @@ State monad:
 > fresh :: ST Int 
 > fresh = S (\n -> (n, n+1))
 
-> eval :: Expr -> Code
-> eval (Val i) = [PUSH i]
-> eval (Var n) = [PUSHV n]
-> eval (App op e1 e2) = (eval e1) ++ (eval e2) ++ [DO op]
+
+> compexpr :: Expr -> Code
+> compexpr (Val i) = [PUSH i]
+> compexpr (Var n) = [PUSHV n]
+> compexpr (App op e1 e2) = (compexpr e1) ++ (compexpr e2) ++ [DO op]
+
 
 > comp :: Prog -> Code
-> comp p = fst (app (compHelper p) 0)
+> comp p = fst (app (compprog p) 0)
                               
 
-> compHelper :: Prog -> ST (Code)
-> compHelper (Assign c e) = return ((eval e) ++ [POP c])
-> compHelper (If e p1 p2) = do l <- fresh
->                              pp1 <- compHelper p1
->                              pp2 <- compHelper p2
->                              return ((eval e) ++ [JUMPZ l] ++ pp1 ++ [LABEL 0] ++ pp2)
-> compHelper (While e p) = do l <- fresh
->                             l1 <- fresh 
->                             pp <- compHelper p
->                             return ((LABEL l : (eval e)) ++ [JUMPZ l1] ++ pp ++ [JUMP l, LABEL l1])
-> compHelper (Seqn []) = return []
-> compHelper (Seqn (p:ps)) = do pp <- compHelper p 
->                               pps <- compHelper (Seqn ps)
->                               return (pp ++ pps)
+> compprog :: Prog -> ST (Code)
+> compprog (Assign c e) = return ((compexpr e) ++ [POP c])
+> compprog (If e p1 p2) = do l <- fresh
+>                            pp1 <- compprog p1
+>                            pp2 <- compprog p2
+>                            return ((compexpr e) ++ [JUMPZ l] ++ pp1 ++ [LABEL 0] ++ pp2)
+> compprog (While e p) = do l <- fresh
+>                           l1 <- fresh 
+>                           pp <- compprog p
+>                           return ((LABEL l : (compexpr e)) ++ [JUMPZ l1] ++ pp ++ [JUMP l, LABEL l1])
+> compprog (Seqn []) = return []
+> compprog (Seqn (p:ps)) = do pp <- compprog p 
+>                             pps <- compprog (Seqn ps)
+>                             return (pp ++ pps)
 
 > testP :: Int -> Int -> Prog
 > testP a b = Seqn [Assign 'A' (Val a),
