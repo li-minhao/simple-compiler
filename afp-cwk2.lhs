@@ -127,3 +127,5 @@ State monad:
 >                      (Assign 'A' (App Add (Var 'A') (Var 'B')))]
 
 
+
+
