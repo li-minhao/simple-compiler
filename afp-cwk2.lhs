@@ -98,35 +98,35 @@ State monad:
 > compexpr :: Expr -> Code
 > compexpr (Val i) = [PUSH i]
 > compexpr (Var n) = [PUSHV n]
-> compexpr (App op e1 e2) = (compexpr e1) ++ (compexpr e2) ++ [DO op]
-
-
-> comp :: Prog -> Code
-> comp p = fst (app (compprog p) 0)
+> compexpr (App op e1 e2) = compexpr e1 ++ compexpr e2 ++ [DO op]
                               
 
 > compprog :: Prog -> ST Code
-> compprog (Assign c e) = return ((compexpr e) ++ [POP c])
+> compprog (Assign c e) = return (compexpr e ++ [POP c])
 > compprog (If e p1 p2) = do l <- fresh
 >                            pp1 <- compprog p1
 >                            pp2 <- compprog p2
->                            return ((compexpr e) ++ [JUMPZ l] ++ pp1 ++ [LABEL 0] ++ pp2)
+>                            return (compexpr e ++ [JUMPZ l] ++ pp1 ++ [LABEL 0] ++ pp2)
 > compprog (While e p) = do l <- fresh
 >                           l1 <- fresh 
 >                           pp <- compprog p
->                           return ((LABEL l : (compexpr e)) ++ [JUMPZ l1] ++ pp ++ [JUMP l, LABEL l1])
+>                           return (LABEL l : compexpr e ++ [JUMPZ l1] ++ pp ++ [JUMP l, LABEL l1])
 > compprog (Seqn []) = return []
 > compprog (Seqn (p:ps)) = do pp <- compprog p 
 >                             pps <- compprog (Seqn ps)
 >                             return (pp ++ pps)
 
 
-> testP :: Int -> Int -> Prog
-> testP a b = Seqn [Assign 'A' (Val a),
->                   Assign 'B' (Val b),
->                   If (App Sub (Var 'B') (Var 'A')) 
->                      (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
->                      (Assign 'A' (App Add (Var 'A') (Var 'B')))]
+> comp :: Prog -> Code
+> comp p = fst (app (compprog p) 0)
+
+
+testP :: Int -> Int -> Prog
+testP a b = Seqn [Assign 'A' (Val a),
+                  Assign 'B' (Val b),
+                  If (App Sub (Var 'B') (Var 'A')) 
+                     (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
+                     (Assign 'A' (App Add (Var 'A') (Var 'B')))]
 
 
 > instType :: Inst -> Int
@@ -207,6 +207,18 @@ exec c = execHelper c 0 [] []
 >   | instType (c!!p) == 4 = execHelper c (jumpLbl 0 c (c!!p)) m s
 >   | instType (c!!p) == 5 = execHelper c (if last s == 0 then (jumpLbl 0 c (c!!p)) else (p+1)) m (init s)
 >   | otherwise = execHelper c (p+1) m s
+
+
+execHelper :: Code -> Int -> Mem -> Stack -> WriterT Mem ST Stack
+execHelper c p m s 
+  | p >= length c = tell m
+  | instType (c!!p) == 0 = execHelper c (p+1) m (s ++ [pushInt (c!!p)])
+  | instType (c!!p) == 1 = execHelper c (p+1) m (s ++ [pushVar (c!!p) m])
+  | instType (c!!p) == 2 = execHelper c (p+1) (popVar m (c!!p) (last s)) (init s)
+  | instType (c!!p) == 3 = execHelper c (p+1) m (doOpr s (c!!p))
+  | instType (c!!p) == 4 = execHelper c (jumpLbl 0 c (c!!p)) m s
+  | instType (c!!p) == 5 = execHelper c (if last s == 0 then (jumpLbl 0 c (c!!p)) else (p+1)) m (init s)
+  | otherwise = execHelper c (p+1) m s
 
 
 > exec :: Code -> Mem
