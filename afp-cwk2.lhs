@@ -95,7 +95,6 @@ State monad:
 > fresh :: ST Int 
 > fresh = S (\n -> (n, n+1))
 
-
 > compexpr :: Expr -> Code
 > compexpr (Val i)        = [PUSH i]
 > compexpr (Var n)        = [PUSHV n]
@@ -116,7 +115,6 @@ State monad:
 
 > comp :: Prog -> Code
 > comp p = fst (app (execWriterT (compprog p)) 0)
-
 
 
 > testP :: Int -> Int -> Prog
