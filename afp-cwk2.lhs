@@ -92,14 +92,26 @@ State monad:
 
 --------------------------------------------------------------------------------
 
+fresh: to update the state and output a fresh integer accordingly.
+
 > fresh :: ST Int 
 > fresh = S (\n -> (n, n+1))
+
+
+compexpr: to compile a single expression to assembly code by pattern matching.
 
 > compexpr :: Expr -> Code
 > compexpr (Val i)        = [PUSH i]
 > compexpr (Var n)        = [PUSHV n]
 > compexpr (App op e1 e2) = compexpr e1 ++ compexpr e2 ++ [DO op]
+
                               
+compprog: to compile a program to assembly code by pattern matching. compprog
+compiles the program by compiling each expression with compexpr and combined the
+results. compprog is acchieved by a writer monad transformer to log the code to
+be outputted. The code is recorded at the back and updated in each compiling by
+adding new compiled outcomes. compprog also makes used of fresh to generate
+fresh label added to the code. 
 
 > compprog :: Prog -> WriterT Code ST ()
 > compprog (Assign c e)  = do tell (compexpr e) >> tell [POP c]
@@ -112,6 +124,9 @@ State monad:
 > compprog (Seqn [])     = tell []
 > compprog (Seqn (p:ps)) = tell (comp p) >> tell (comp (Seqn ps))
 
+
+comp: the main function of the compiler. It executes compprog, which is
+implemented by a writer monad transformer, and extracts the resulted code out.
 
 > comp :: Prog -> Code
 > comp p = fst (app (execWriterT (compprog p)) 0)
