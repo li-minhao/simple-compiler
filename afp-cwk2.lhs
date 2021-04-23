@@ -122,40 +122,23 @@ compprogHelper = S (\i -> (i++))
 
 
 
-testP :: Int -> Int -> Prog
-testP a b = Seqn [Assign 'A' (Val a),
-                  Assign 'B' (Val b),
-                  If (App Sub (Var 'B') (Var 'A')) 
-                     (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
-                     (Assign 'A' (App Add (Var 'A') (Var 'B')))]
+> testP :: Int -> Int -> Prog
+> testP a b = Seqn [Assign 'A' (Val a),
+>                  Assign 'B' (Val b),
+>                  If (App Sub (Var 'B') (Var 'A')) 
+>                     (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
+>                     (Assign 'A' (App Add (Var 'A') (Var 'B')))]
 
-
-> instType :: Inst -> Int
-> instType (PUSH i) = 0
-> instType (PUSHV n) = 1
-> instType (POP n) = 2
-> instType (DO o) = 3
-> instType (JUMP l) = 4
-> instType (JUMPZ l) = 5
-> instType _ = 6
-> -- instType (LABEL l) = 6
-
-> pushInt :: Inst -> Int
-> pushInt (PUSH i) = i
-> pushInt _ = 0
-
-> pushVar :: Inst -> Mem -> Int
-> pushVar (PUSHV c1) ((c2,i):ms)
+> getVar :: Char -> Mem -> Int
+> getVar c1 ((c2,i):ms)
 >   | c1 == c2 = i
->   | otherwise = pushVar (PUSHV c1) ms
-> pushVar _ _ = 0
+>   | otherwise = getVar c1 ms
 
-> popVar :: Mem -> Inst -> Int -> Mem
-> popVar ((c1,v):ms) (POP c2) i
+> popVar :: Mem -> Char -> Int -> Mem
+> popVar ((c1,v):ms) c2 i
 >   | c1 == c2 = (c1,i):ms
->   | otherwise = (c1,v):(popVar ms (POP c2) i)
-> popVar [] (POP c) i = [(c,i)]
-> popVar ms _ _ = ms
+>   | otherwise = (c1,v):(popVar ms c2 i)
+> popVar [] c i = [(c,i)]
 
 > op2func :: Op -> (Int -> Int -> Int)
 > op2func Add = (+)
@@ -163,65 +146,31 @@ testP a b = Seqn [Assign 'A' (Val a),
 > op2func Mul = (*)
 > op2func Div = div
 
-> doOpr :: Stack -> Inst -> Stack
-> doOpr (i1:(i2:is)) (DO o) = heads ++ [op l2 l1]
+> doOpr :: Stack -> Op -> Stack
+> doOpr (i1:(i2:is)) o = heads ++ [op l2 l1]
 >   where 
 >       heads = init (init (i1:(i2:is)))
 >       l2 = last (init (i1:(i2:is)))
 >       l1 = last (i1:(i2:is))
 >       op = op2func o
-> doOpr s _ = s
 
-> jumpLbl :: Int -> Code -> Inst -> Int 
-> jumpLbl i ((LABEL l1):cs)  (JUMP l2)
+> jumpLbl :: Int -> Code -> Label -> Int 
+> jumpLbl i ((LABEL l1):cs) l2
 >   | l1 == l2 = i 
->   | otherwise = jumpLbl (i+1) cs (JUMP l2)
-> jumpLbl i (c:cs) (JUMP l) = jumpLbl (i+1) cs (JUMP l)
-> jumpLbl i ((LABEL l1):cs)  (JUMPZ l2)
->   | l1 == l2 = i 
->   | otherwise = jumpLbl (i+1) cs (JUMPZ l2)
-> jumpLbl i (c:cs) (JUMPZ l) = jumpLbl (i+1) cs (JUMPZ l)
-> jumpLbl _ _ _ = 0
+>   | otherwise = jumpLbl (i+1) cs l2
 
-execHelper :: Code -> Int -> Mem -> Stack -> Mem
-execHelper c p m s 
-  | p >= length c = m
-  | instType (c!!p) == 0 = execHelper c (p+1) m (s ++ [pushInt (c!!p)])
-  | instType (c!!p) == 1 = execHelper c (p+1) m (s ++ [pushVar (c!!p) m])
-  | instType (c!!p) == 2 = execHelper c (p+1) (popVar m (c!!p) (last s)) (init s)
-  | instType (c!!p) == 3 = execHelper c (p+1) m (doOpr s (c!!p))
-  | instType (c!!p) == 4 = execHelper c (jumpLbl 0 c (c!!p)) m s
-  | instType (c!!p) == 5 = execHelper c (if last s == 0 then (jumpLbl 0 c (c!!p)) else (p+1)) m (init s)
-  | otherwise = execHelper c (p+1) m s
-
-exec :: Code -> Mem
-exec c = execHelper c 0 [] []
-
-
-> execHelper :: Code -> Int -> Mem -> Stack -> WriterT Mem ST ()
+> execHelper :: Code -> Int -> Mem -> Stack -> Mem
 > execHelper c p m s 
->   | p >= length c = tell m
->   | instType (c!!p) == 0 = execHelper c (p+1) m (s ++ [pushInt (c!!p)])
->   | instType (c!!p) == 1 = execHelper c (p+1) m (s ++ [pushVar (c!!p) m])
->   | instType (c!!p) == 2 = execHelper c (p+1) (popVar m (c!!p) (last s)) (init s)
->   | instType (c!!p) == 3 = execHelper c (p+1) m (doOpr s (c!!p))
->   | instType (c!!p) == 4 = execHelper c (jumpLbl 0 c (c!!p)) m s
->   | instType (c!!p) == 5 = execHelper c (if last s == 0 then (jumpLbl 0 c (c!!p)) else (p+1)) m (init s)
->   | otherwise = execHelper c (p+1) m s
-
-
-execHelper :: Code -> Int -> Mem -> Stack -> WriterT Mem ST Stack
-execHelper c p m s 
-  | p >= length c = tell m
-  | instType (c!!p) == 0 = execHelper c (p+1) m (s ++ [pushInt (c!!p)])
-  | instType (c!!p) == 1 = execHelper c (p+1) m (s ++ [pushVar (c!!p) m])
-  | instType (c!!p) == 2 = execHelper c (p+1) (popVar m (c!!p) (last s)) (init s)
-  | instType (c!!p) == 3 = execHelper c (p+1) m (doOpr s (c!!p))
-  | instType (c!!p) == 4 = execHelper c (jumpLbl 0 c (c!!p)) m s
-  | instType (c!!p) == 5 = execHelper c (if last s == 0 then (jumpLbl 0 c (c!!p)) else (p+1)) m (init s)
-  | otherwise = execHelper c (p+1) m s
-
+>   | p >= length c = m 
+>   | otherwise = case (c!!p) of 
+>       PUSH i -> execHelper c (p+1) m (s ++ [i])
+>       PUSHV v -> execHelper c (p+1) m (s ++ [getVar v m])
+>       POP v -> execHelper c (p+1) (popVar m v (last s)) (init s)
+>       DO o -> execHelper c (p+1) m (doOpr s o)
+>       JUMP l -> execHelper c (jumpLbl 0 c l) m s
+>       JUMPZ l -> execHelper c (if last s == 0 then (jumpLbl 0 c l) else (p+1)) m (init s)
+>       otherwise -> execHelper c (p+1) m s
 
 > exec :: Code -> Mem
-> exec c = fst (app (execWriterT (execHelper c 0 [] [])) 0)
+> exec c = execHelper c 0 [] []
 
