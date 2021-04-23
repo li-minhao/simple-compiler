@@ -100,9 +100,6 @@ State monad:
 > compexpr (Val i)        = [PUSH i]
 > compexpr (Var n)        = [PUSHV n]
 > compexpr (App op e1 e2) = compexpr e1 ++ compexpr e2 ++ [DO op]
-
-compprogHelper :: ST Code
-compprogHelper = S (\i -> (i++))
                               
 
 > compprog :: Prog -> WriterT Code ST ()
@@ -163,12 +160,12 @@ compprogHelper = S (\i -> (i++))
 > execHelper c p m s 
 >   | p >= length c = m 
 >   | otherwise = case (c!!p) of 
->       PUSH i -> execHelper c (p+1) m (s ++ [i])
->       PUSHV v -> execHelper c (p+1) m (s ++ [getVar v m])
->       POP v -> execHelper c (p+1) (popVar m v (last s)) (init s)
->       DO o -> execHelper c (p+1) m (doOpr s o)
->       JUMP l -> execHelper c (jumpLbl 0 c l) m s
->       JUMPZ l -> execHelper c (if last s == 0 then (jumpLbl 0 c l) else (p+1)) m (init s)
+>       PUSH i    -> execHelper c (p+1) m (s ++ [i])
+>       PUSHV v   -> execHelper c (p+1) m (s ++ [getVar v m])
+>       POP v     -> execHelper c (p+1) (popVar m v (last s)) (init s)
+>       DO o      -> execHelper c (p+1) m (doOpr s o)
+>       JUMP l    -> execHelper c (jumpLbl 0 c l) m s
+>       JUMPZ l   -> execHelper c (if last s == 0 then (jumpLbl 0 c l) else (p+1)) m (init s)
 >       otherwise -> execHelper c (p+1) m s
 
 > exec :: Code -> Mem
