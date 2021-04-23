@@ -111,7 +111,7 @@ compiles the program by compiling each expression with compexpr and combined the
 results. compprog is acchieved by a writer monad transformer to log the code to
 be outputted. The code is recorded at the back and updated in each compiling by
 adding new compiled outcomes. compprog also makes used of fresh to generate
-fresh label added to the code. 
+fresh labels added to the code. 
 
 > compprog :: Prog -> WriterT Code ST ()
 > compprog (Assign c e)  = do tell (compexpr e) >> tell [POP c]
