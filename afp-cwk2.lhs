@@ -14,6 +14,7 @@ We use some functions from the following libraries.
 
 > import Data.Char
 > import Control.Monad.Trans.Writer
+> import Control.Monad.Trans
 
 
 Imperative language:
@@ -96,29 +97,29 @@ State monad:
 
 
 > compexpr :: Expr -> Code
-> compexpr (Val i) = [PUSH i]
-> compexpr (Var n) = [PUSHV n]
+> compexpr (Val i)        = [PUSH i]
+> compexpr (Var n)        = [PUSHV n]
 > compexpr (App op e1 e2) = compexpr e1 ++ compexpr e2 ++ [DO op]
+
+compprogHelper :: ST Code
+compprogHelper = S (\i -> (i++))
                               
 
-> compprog :: Prog -> ST Code
-> compprog (Assign c e) = return (compexpr e ++ [POP c])
-> compprog (If e p1 p2) = do l <- fresh
->                            pp1 <- compprog p1
->                            pp2 <- compprog p2
->                            return (compexpr e ++ [JUMPZ l] ++ pp1 ++ [LABEL 0] ++ pp2)
-> compprog (While e p) = do l <- fresh
->                           l1 <- fresh 
->                           pp <- compprog p
->                           return (LABEL l : compexpr e ++ [JUMPZ l1] ++ pp ++ [JUMP l, LABEL l1])
-> compprog (Seqn []) = return []
-> compprog (Seqn (p:ps)) = do pp <- compprog p 
->                             pps <- compprog (Seqn ps)
->                             return (pp ++ pps)
+> compprog :: Prog -> WriterT Code ST ()
+> compprog (Assign c e)  = do tell (compexpr e) >> tell [POP c]
+> compprog (If e p1 p2)  = do l <- lift fresh
+>                             l1 <- lift fresh
+>                             tell (compexpr e) >> tell (JUMPZ l1 : (comp p1)) >> tell (LABEL l : (comp p2))
+> compprog (While e p)   = do l <- lift fresh
+>                             l1 <- lift fresh 
+>                             tell (LABEL l : compexpr e) >> tell (JUMPZ l1 : (comp p)) >> tell [JUMP l, LABEL l1]
+> compprog (Seqn [])     = tell []
+> compprog (Seqn (p:ps)) = tell (comp p) >> tell (comp (Seqn ps))
 
 
 > comp :: Prog -> Code
-> comp p = fst (app (compprog p) 0)
+> comp p = fst (app (execWriterT (compprog p)) 0)
+
 
 
 testP :: Int -> Int -> Prog
