@@ -155,6 +155,8 @@ State monad:
 > jumpLbl i ((LABEL l1):cs) l2
 >   | l1 == l2 = i 
 >   | otherwise = jumpLbl (i+1) cs l2
+> jumpLbl i (c:cs) l = jumpLbl (i+1) cs l
+> jumpLbl _ _ _ = 0
 
 > execHelper :: Code -> Int -> Mem -> Stack -> Mem
 > execHelper c p m s 
