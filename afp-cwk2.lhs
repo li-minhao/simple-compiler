@@ -132,17 +132,15 @@ implemented by a writer monad transformer, and extracts the resulted code out.
 > comp p = fst (app (execWriterT (compprog p)) 0)
 
 
-> testP :: Int -> Int -> Prog
-> testP a b = Seqn [Assign 'A' (Val a),
->                  Assign 'B' (Val b),
->                  If (App Sub (Var 'B') (Var 'A')) 
->                     (Seqn [Assign 'A' (App Mul (Var 'A') (Var 'B'))])
->                     (Assign 'A' (App Add (Var 'A') (Var 'B')))]
+getVar: to fetch the value of the specified variable from the memory
 
 > getVar :: Char -> Mem -> Int
 > getVar c1 ((c2,i):ms)
 >   | c1 == c2 = i
 >   | otherwise = getVar c1 ms
+
+
+popVar: to assign the new value to the specified variable in the memory
 
 > popVar :: Mem -> Char -> Int -> Mem
 > popVar ((c1,v):ms) c2 i
@@ -150,11 +148,16 @@ implemented by a writer monad transformer, and extracts the resulted code out.
 >   | otherwise = (c1,v):(popVar ms c2 i)
 > popVar [] c i = [(c,i)]
 
+
+op2func: to convert the specified 'Op' into its corresponding function
+
 > op2func :: Op -> (Int -> Int -> Int)
 > op2func Add = (+)
 > op2func Sub = (-)
 > op2func Mul = (*)
 > op2func Div = div
+
+doOpr: to do the specified operation on the stack and return the changed stack
 
 > doOpr :: Stack -> Op -> Stack
 > doOpr (i1:(i2:is)) o = heads ++ [op l2 l1]
@@ -164,12 +167,18 @@ implemented by a writer monad transformer, and extracts the resulted code out.
 >       l1 = last (i1:(i2:is))
 >       op = op2func o
 
+
+jumpLbl: to find the specified label in the code
+
 > jumpLbl :: Int -> Code -> Label -> Int 
 > jumpLbl i ((LABEL l1):cs) l2
 >   | l1 == l2 = i 
 >   | otherwise = jumpLbl (i+1) cs l2
 > jumpLbl i (c:cs) l = jumpLbl (i+1) cs l
 > jumpLbl _ _ _ = 0
+
+
+execHelper: to execute the code from the first instruction and returns the final memory
 
 > execHelper :: Code -> Int -> Mem -> Stack -> Mem
 > execHelper c p m s 
@@ -182,6 +191,9 @@ implemented by a writer monad transformer, and extracts the resulted code out.
 >       JUMP l    -> execHelper c (jumpLbl 0 c l) m s
 >       JUMPZ l   -> execHelper c (if last s == 0 then (jumpLbl 0 c l) else (p+1)) m (init s)
 >       otherwise -> execHelper c (p+1) m s
+
+
+exec: to execute the program
 
 > exec :: Code -> Mem
 > exec c = execHelper c 0 [] []
