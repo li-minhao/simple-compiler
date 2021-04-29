@@ -160,12 +160,9 @@ op2func: to convert the specified 'Op' into its corresponding function
 doOpr: to do the specified operation on the stack and return the changed stack
 
 > doOpr :: Stack -> Op -> Stack
-> doOpr (i1:(i2:is)) o = heads ++ [op l2 l1]
->   where 
->       heads = init (init (i1:(i2:is)))
->       l2 = last (init (i1:(i2:is)))
->       l1 = last (i1:(i2:is))
->       op = op2func o
+> doOpr (i1:(i2:is)) o = (op i2 i1):is
+>   where op = op2func o
+> doOpr s o = s
 
 
 jumpLbl: to find the specified label in the code
@@ -178,18 +175,19 @@ jumpLbl: to find the specified label in the code
 > jumpLbl _ _ _ = 0
 
 
-execHelper: to execute the code from the first instruction and returns the final memory
+execHelper: to execute the code from the first instruction and returns the final memory,
+and a program counter is used to specify which instruction to execute next
 
 > execHelper :: Code -> Int -> Mem -> Stack -> Mem
 > execHelper c p m s 
 >   | p >= length c = m 
 >   | otherwise = case (c!!p) of 
->       PUSH i    -> execHelper c (p+1) m (s ++ [i])
->       PUSHV v   -> execHelper c (p+1) m (s ++ [getVar v m])
->       POP v     -> execHelper c (p+1) (popVar m v (last s)) (init s)
+>       PUSH i    -> execHelper c (p+1) m (i:s)
+>       PUSHV v   -> execHelper c (p+1) m ((getVar v m):s)
+>       POP v     -> execHelper c (p+1) (popVar m v (head s)) (tail s)
 >       DO o      -> execHelper c (p+1) m (doOpr s o)
 >       JUMP l    -> execHelper c (jumpLbl 0 c l) m s
->       JUMPZ l   -> execHelper c (if last s == 0 then (jumpLbl 0 c l) else (p+1)) m (init s)
+>       JUMPZ l   -> execHelper c (if head s == 0 then (jumpLbl 0 c l) else (p+1)) m (tail s)
 >       otherwise -> execHelper c (p+1) m s
 
 
