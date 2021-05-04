@@ -13,6 +13,7 @@ scyjh2@nottingham.ac.uk
 We use some functions from the following libraries.
 
 > import Data.Char
+> import Data.List
 > import Control.Monad.Trans.Writer
 > import Control.Monad.Trans
 
@@ -133,14 +134,6 @@ implemented by a writer monad transformer, and extracts the resulted code out.
 > comp p = fst (app (execWriterT (compprog p)) 0)
 
 
-getVar: to fetch the value of the specified variable from the memory
-
-> getVar :: Char -> Mem -> Int
-> getVar c1 ((c2,i):ms)
->   | c1 == c2 = i
->   | otherwise = getVar c1 ms
-
-
 popVar: to assign the new value to the specified variable in the memory
 
 > popVar :: Mem -> Char -> Int -> Mem
@@ -183,7 +176,7 @@ and a program counter is used to specify which instruction to execute next
 >   | p >= length c = m 
 >   | otherwise = case (c!!p) of 
 >       PUSH i    -> execHelper c (p+1) m (i:s)
->       PUSHV v   -> execHelper c (p+1) m ((getVar v m):s)
+>       PUSHV v   -> execHelper c (p+1) m ((case (lookup v m) of Just x -> x; otherwise -> 0):s)
 >       POP v     -> execHelper c (p+1) (popVar m v (head s)) (tail s)
 >       DO o      -> execHelper c (p+1) m (doOpr s o)
 >       JUMP l    -> execHelper c (jumpLbl 0 c l) m s
