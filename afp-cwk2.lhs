@@ -116,15 +116,24 @@ backend during each compiling as well. compprog also makes used of fresh to
 generate fresh labels added to the code. 
 
 > compprog :: Prog -> WriterT Code ST ()
-> compprog (Assign c e)  = do tell (compexpr e) >> tell [POP c]
+> compprog (Assign c e)  = do tell (compexpr e) 
+>                             tell [POP c]
 > compprog (If e p1 p2)  = do l <- lift fresh
 >                             l1 <- lift fresh
->                             tell (compexpr e) >> tell [JUMPZ l1] >> compprog p1 >> tell [LABEL l] >> compprog p2
+>                             tell (compexpr e) 
+>                             tell [JUMPZ l1] 
+>                             compprog p1 
+>                             tell [LABEL l]
+>                             compprog p2
 > compprog (While e p)   = do l <- lift fresh
 >                             l1 <- lift fresh 
->                             tell (LABEL l : compexpr e) >> tell [JUMPZ l1] >> compprog p >> tell [JUMP l, LABEL l1]
-> compprog (Seqn [])     = tell []
-> compprog (Seqn (p:ps)) = compprog p >> compprog (Seqn ps)
+>                             tell (LABEL l : compexpr e) 
+>                             tell [JUMPZ l1]
+>                             compprog p 
+>                             tell [JUMP l, LABEL l1]
+> compprog (Seqn [])     = return ()
+> compprog (Seqn (p:ps)) = do compprog p
+>                             compprog (Seqn ps)
 
 
 comp: the main function of the compiler. It executes compprog, which is
