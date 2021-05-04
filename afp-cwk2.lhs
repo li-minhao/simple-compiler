@@ -122,7 +122,7 @@ generate fresh labels added to the code.
 >                             l1 <- lift fresh
 >                             l2 <- lift fresh
 >                             tell (compexpr e) 
->                             tell [JUMPZ l1,LABEL l]
+>                             tell [JUMPZ l1, LABEL l]
 >                             compprog p1 
 >                             tell [JUMP l2, LABEL l1]
 >                             compprog p2
