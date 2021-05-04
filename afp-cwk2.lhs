@@ -32,7 +32,7 @@ Imperative language:
 > type Name = Char
 >
 > data Op   = Add | Sub | Mul | Div
->             deriving Show
+>             deriving (Show, Eq)
 
 Factorial example:
 
@@ -58,7 +58,7 @@ Virtual machine:
 >            | JUMP Label
 >            | JUMPZ Label
 >            | LABEL Label
->              deriving Show
+>              deriving (Show, Eq)
 > 
 > type Label = Int
 
@@ -156,17 +156,6 @@ doOpr: to do the specified operation on the stack and return the changed stack
 > doOpr :: Stack -> Op -> Stack
 > doOpr (i1:(i2:is)) o = (op i2 i1):is
 >   where op = op2func o
-> doOpr s o = s
-
-
-jumpLbl: to find the specified label in the code
-
-> jumpLbl :: Int -> Code -> Label -> Int 
-> jumpLbl i ((LABEL l1):cs) l2
->   | l1 == l2 = i 
->   | otherwise = jumpLbl (i+1) cs l2
-> jumpLbl i (c:cs) l = jumpLbl (i+1) cs l
-> jumpLbl _ _ _ = 0
 
 
 execHelper: to execute the code from the first instruction and returns the final memory,
@@ -177,12 +166,12 @@ and a program counter is used to specify which instruction to execute next
 >   | p >= length c = m 
 >   | otherwise = case (c!!p) of 
 >       PUSH i    -> execHelper c (p+1) m (i:s)
->       PUSHV v   -> execHelper c (p+1) m ((case (lookup v m) of Just x -> x; otherwise -> 0):s)
+>       PUSHV v   -> execHelper c (p+1) m ((case (lookup v m) of Just x -> x):s)
 >       POP v     -> execHelper c (p+1) (popVar m v (head s)) (tail s)
 >       DO o      -> execHelper c (p+1) m (doOpr s o)
->       JUMP l    -> execHelper c (jumpLbl 0 c l) m s
->       JUMPZ l   -> execHelper c (if head s == 0 then (jumpLbl 0 c l) else (p+1)) m (tail s)
->       otherwise -> execHelper c (p+1) m s
+>       JUMP l    -> execHelper c (case (elemIndex (LABEL l) c) of Just x -> x) m s
+>       JUMPZ l   -> execHelper c (if head s == 0 then (case (elemIndex (LABEL l) c) of Just x -> x) else (p+1)) m (tail s)
+>       LABEL l -> execHelper c (p+1) m s
 
 
 exec: to execute the program
