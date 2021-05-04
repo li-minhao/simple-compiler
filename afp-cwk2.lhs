@@ -107,7 +107,7 @@ compexpr: to compile a single expression to assembly code by pattern matching.
 > compexpr (App op e1 e2) = compexpr e1 ++ compexpr e2 ++ [DO op]
 
                               
-compprog: to compile a program to assembly code by pattern matching. compprog
+compprog: to compile a program to machine code by pattern matching. compprog
 compiles the program by compiling each expression with compexpr and combined the
 results. compprog is acchieved by a writer monad transformer to log the code to
 be outputted by tell. The code is recorded at the backend and updated in each 
@@ -120,11 +120,13 @@ generate fresh labels added to the code.
 >                             tell [POP c]
 > compprog (If e p1 p2)  = do l <- lift fresh
 >                             l1 <- lift fresh
+>                             l2 <- lift fresh
 >                             tell (compexpr e) 
->                             tell [JUMPZ l1] 
+>                             tell [JUMPZ l1,LABEL l]
 >                             compprog p1 
->                             tell [LABEL l]
+>                             tell [JUMP l2, LABEL l1]
 >                             compprog p2
+>                             tell [LABEL l2]
 > compprog (While e p)   = do l <- lift fresh
 >                             l1 <- lift fresh 
 >                             tell (LABEL l : compexpr e) 
@@ -186,4 +188,3 @@ exec: to execute the program
 
 > exec :: Code -> Mem
 > exec c = execHelper c 0 [] []
-
