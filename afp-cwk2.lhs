@@ -175,7 +175,6 @@ jumpLbl: to find the specified label in the code
 > jumpLbl i (c:cs) l = jumpLbl (i+1) cs l
 > jumpLbl _ _ _ = 0
 
-
 execHelper: to execute the code from the first instruction and returns the final memory,
 and a program counter is used to specify which instruction to execute next
 
