@@ -110,20 +110,21 @@ compexpr: to compile a single expression to assembly code by pattern matching.
 compprog: to compile a program to assembly code by pattern matching. compprog
 compiles the program by compiling each expression with compexpr and combined the
 results. compprog is acchieved by a writer monad transformer to log the code to
-be outputted. The code is recorded at the back and updated in each compiling by
-adding new compiled outcomes. compprog also makes used of fresh to generate
-fresh labels added to the code. 
+be outputted by tell. The code is recorded at the backend and updated in each 
+compiling by adding new compiled outcomes. The state monad is updated at the 
+backend during each compiling as well. compprog also makes used of fresh to 
+generate fresh labels added to the code. 
 
 > compprog :: Prog -> WriterT Code ST ()
 > compprog (Assign c e)  = do tell (compexpr e) >> tell [POP c]
 > compprog (If e p1 p2)  = do l <- lift fresh
 >                             l1 <- lift fresh
->                             tell (compexpr e) >> tell (JUMPZ l1 : (comp p1)) >> tell (LABEL l : (comp p2))
+>                             tell (compexpr e) >> tell [JUMPZ l1] >> compprog p1 >> tell [LABEL l] >> compprog p2
 > compprog (While e p)   = do l <- lift fresh
 >                             l1 <- lift fresh 
->                             tell (LABEL l : compexpr e) >> tell (JUMPZ l1 : (comp p)) >> tell [JUMP l, LABEL l1]
+>                             tell (LABEL l : compexpr e) >> tell [JUMPZ l1] >> compprog p >> tell [JUMP l, LABEL l1]
 > compprog (Seqn [])     = tell []
-> compprog (Seqn (p:ps)) = tell (comp p) >> tell (comp (Seqn ps))
+> compprog (Seqn (p:ps)) = compprog p >> compprog (Seqn ps)
 
 
 comp: the main function of the compiler. It executes compprog, which is
