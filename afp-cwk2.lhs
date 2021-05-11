@@ -120,22 +120,19 @@ generate fresh labels added to the code.
 >                             tell [POP c]
 > compprog (If e p1 p2)  = do l <- lift fresh
 >                             l1 <- lift fresh
->                             l2 <- lift fresh
 >                             tell (compexpr e) 
->                             tell [JUMPZ l1, LABEL l]
+>                             tell [JUMPZ l]
 >                             compprog p1 
->                             tell [JUMP l2, LABEL l1]
+>                             tell [JUMP l1, LABEL l]
 >                             compprog p2
->                             tell [LABEL l2]
+>                             tell [LABEL l1]
 > compprog (While e p)   = do l <- lift fresh
 >                             l1 <- lift fresh 
 >                             tell (LABEL l : compexpr e) 
 >                             tell [JUMPZ l1]
 >                             compprog p 
 >                             tell [JUMP l, LABEL l1]
-> compprog (Seqn [])     = return ()
-> compprog (Seqn (p:ps)) = do compprog p
->                             compprog (Seqn ps)
+> compprog (Seqn ps) = mapM_ compprog ps
 
 
 comp: the main function of the compiler. It executes compprog, which is
